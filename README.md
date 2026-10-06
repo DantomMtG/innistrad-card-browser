@@ -2,15 +2,35 @@
 
 A small, dependency-free browser app for exploring cards from Innistrad sets and their two- and three-card combos listed by Commander Spellbook.
 
-## Run locally
+## Run locally on Windows
 
-The included JSON data file is about 55 MB. From this folder, start a local web server:
+Python 3 must be installed and available as `py`. The HTML page and its JSON data file must be in the **same folder**. If you use **Code → Download ZIP** from GitHub, extract the archive first.
 
-```powershell
-py -m http.server 8765
-```
+1. Open PowerShell and change to the folder containing `innistrad-card-browser.html` and `innistrad-cards-and-combos.json`. For example, if you extracted the repository into Downloads:
 
-Then open <http://localhost:8765/>. The app automatically loads `innistrad-cards-and-combos.json`. You can also open the HTML file directly and choose the JSON with **Load card JSON**.
+   ```powershell
+   Set-Location "$HOME\Downloads\innistrad-card-browser"
+   ```
+
+   If you cloned or extracted it somewhere else, use that folder's path instead. Check that both files are there:
+
+   ```powershell
+   Get-ChildItem .\innistrad-card-browser.html, .\innistrad-cards-and-combos.json
+   ```
+
+2. Start the web server in that same PowerShell window:
+
+   ```powershell
+   py -m http.server 8765 --bind 127.0.0.1
+   ```
+
+   Leave this window open while using the app. A message such as `Serving HTTP on 127.0.0.1 port 8765` means the server is running.
+
+3. Open **<http://127.0.0.1:8765/innistrad-card-browser.html>** in your browser. The app automatically loads `innistrad-cards-and-combos.json` from the same folder. Going to `http://127.0.0.1:8765/` shows Python's folder listing; it is not the app page.
+
+4. To stop the server, return to the PowerShell window and press **Ctrl+C**. Closing the window also stops it.
+
+If port 8765 is already in use, choose another port (for example `8766`) in the server command and URL. If the page opens but says it cannot load the data, verify that the JSON file is beside the HTML page and that the server was started from that directory. Alternatively, open the HTML file directly and choose the JSON with **Load card JSON**.
 
 ## Features
 
