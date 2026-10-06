@@ -257,6 +257,9 @@
       }
 
       function edhrecRank(card) {
+        if (Number.isFinite(card.edhrec_rank) && card.edhrec_rank > 0) {
+          return card.edhrec_rank;
+        }
         const ranks = (card.printings || [])
           .map(printing => printing.edhrec_rank)
           .filter(rank => Number.isFinite(rank) && rank > 0);
@@ -318,6 +321,9 @@
         formatNotes,
         formatPrerequisites,
         comboUsesOnlySelectedSetCards: usesOnlySelectedSetCards,
+        availableComboCount,
+        edhrecRank,
+        sortCards,
         inheritTopLevelComboFilter,
         componentImage
       } = window.InnistradBrowserHelpers;
@@ -693,8 +699,9 @@
             return response.json();
           })
           .then(loadData)
-          .catch(() => {
-            loadHelp.textContent = "Automatic loading was unavailable. Choose innistrad-cards-and-combos.json to browse.";
+          .catch(error => {
+            console.error("Automatic card-data loading failed:", error);
+            loadHelp.textContent = `Automatic loading failed: ${error.message} Choose innistrad-cards-and-combos.json to browse.`;
             status.textContent = "Load the JSON file to start browsing.";
           });
       }

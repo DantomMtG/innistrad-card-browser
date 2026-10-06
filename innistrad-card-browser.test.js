@@ -66,6 +66,14 @@ test("reads EDHREC rank from available printings and handles unranked cards", ()
   assert.equal(helpers.edhrecRank({ printings: [{ edhrec_rank: null }] }), null);
 });
 
+test("prefers the normalized Oracle-card EDHREC rank", () => {
+  assert.equal(helpers.edhrecRank({
+    edhrec_rank: 75,
+    printings: [{ edhrec_rank: 80 }]
+  }), 75);
+  assert.equal(helpers.edhrecRank({ edhrec_rank: null, printings: [{ edhrec_rank: null }] }), null);
+});
+
 test("sorts by filtered combo count and EDHREC rank with stable name tie breaks", () => {
   const selected = new Set(["set-card", "outside-card"]);
   const combos = {
@@ -133,6 +141,11 @@ test("uses the saved Spellbook Scryfall image when a component is outside the se
 });
 
 test("app wires combo helpers and an inline favicon", () => {
+  const appHelpers = html.match(/const\s*\{([\s\S]*?)\}\s*=\s*window\.InnistradBrowserHelpers;/);
+  assert.ok(appHelpers, "the app should import its browser helpers");
+  for (const helper of ["availableComboCount", "edhrecRank", "sortCards"]) {
+    assert.match(appHelpers[1], new RegExp(`\\b${helper}\\b`));
+  }
   assert.match(html, /id="all-set-combos-only"/);
   assert.match(html, /id="sort-filter"/);
   assert.match(html, /value="combos-desc"/);

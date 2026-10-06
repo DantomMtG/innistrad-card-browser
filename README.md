@@ -41,7 +41,7 @@ The root address printed by the launcher opens the app directly. The card JSON i
 
 ## Data
 
-`innistrad-cards-and-combos.json` contains 3,004 Scryfall printings grouped under 1,655 Oracle cards and 7,790 matching Commander Spellbook combo variants. It is a static snapshot, not live data. Combo records are shared by ID, and a combo may include cards outside the selected sets unless the all-selected-set filter is enabled. Card images are loaded from the image URLs in the data; image files are not bundled.
+`innistrad-cards-and-combos.json` contains 3,004 Scryfall printings grouped under 1,655 Oracle cards and 7,790 matching Commander Spellbook combo variants. Each Oracle card has a top-level `edhrec_rank` from Scryfall; it is `null` when Scryfall provides no rank. The rank is also retained on Scryfall printing records. The file is a static snapshot, not live data. Combo records are shared by ID, and a combo may include cards outside the selected sets unless the all-selected-set filter is enabled. Card images are loaded from the image URLs in the data; image files are not bundled.
 
 The snapshot was generated on October 6, 2026. Its set query is:
 
