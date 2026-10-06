@@ -1,0 +1,642 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#17191d">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23352822'/%3E%3Ctext x='16' y='23' text-anchor='middle' font-size='23'%3E%F0%9F%8C%99%3C/text%3E%3C/svg%3E">
+  <title>Innistrad Card &amp; Combo Browser</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #17191d;
+      --panel: #22252b;
+      --panel-raised: #2a2e36;
+      --border: #393e48;
+      --text: #f1f1ed;
+      --muted: #a5a9b1;
+      --accent: #c48c62;
+      --link: #e4b18b;
+      --shadow: 0 12px 32px #0008;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+
+    button, input, select { font: inherit; }
+    button, select, input[type="search"] {
+      color: var(--text);
+      background: var(--panel-raised);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+
+    button { cursor: pointer; }
+    button:hover { border-color: var(--accent); }
+    button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+
+    a { color: var(--link); }
+
+    header {
+      padding: 26px max(20px, calc((100vw - 1440px) / 2));
+      background: linear-gradient(115deg, #352822, #20242b 65%);
+      border-bottom: 1px solid var(--border);
+    }
+
+    h1 { margin: 0 0 4px; font-size: clamp(1.55rem, 3vw, 2.15rem); }
+    header p { margin: 0; color: var(--muted); }
+
+    main { max-width: 1480px; margin: 0 auto; padding: 20px; }
+
+    .load-panel, .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+      padding: 14px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+    }
+
+    .load-panel { margin-bottom: 14px; }
+    .load-panel p { margin: 0; flex: 1 1 330px; color: var(--muted); }
+    .toolbar { position: sticky; top: 8px; z-index: 2; box-shadow: var(--shadow); }
+    .toolbar input[type="search"] { flex: 1 1 240px; min-width: 160px; padding: 9px 12px; }
+    .toolbar select, .load-panel button { padding: 9px 11px; }
+    .load-panel button { font-weight: 650; }
+    .load-panel input[type="file"] { display: none; }
+
+    .check-filter {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      min-height: 40px;
+      padding: 0 8px;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    #status { margin: 14px 2px; color: var(--muted); }
+    #status.error { color: #ff9d91; }
+    #cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+      gap: 16px;
+    }
+
+    .card-tile {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      padding: 9px;
+      text-align: left;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      transition: transform 120ms ease, border-color 120ms ease;
+    }
+
+    .card-tile:hover { transform: translateY(-2px); border-color: var(--accent); }
+    .card-tile img { display: block; width: 100%; aspect-ratio: 488 / 680; object-fit: cover; border-radius: 8px; background: #101114; }
+    .tile-name { margin: 9px 2px 2px; font-weight: 680; }
+    .tile-meta { margin: 0 2px; color: var(--muted); font-size: .82rem; }
+    .combo-tag { align-self: flex-start; margin: 8px 2px 0; padding: 2px 7px; color: #f3c49e; background: #493629; border-radius: 99px; font-size: .75rem; }
+    .empty { grid-column: 1 / -1; padding: 26px; color: var(--muted); text-align: center; }
+
+    dialog {
+      width: min(940px, calc(100vw - 24px));
+      max-height: min(92vh, 980px);
+      padding: 0;
+      overflow: hidden;
+      color: var(--text);
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+    }
+
+    dialog::backdrop { background: #07080bd9; }
+    .dialog-head { display: flex; align-items: center; gap: 12px; padding: 14px 18px; border-bottom: 1px solid var(--border); }
+    .dialog-head h2 { flex: 1; margin: 0; font-size: 1.25rem; }
+    .icon-button { width: 38px; height: 38px; font-size: 1.3rem; }
+    .dialog-body { display: grid; grid-template-columns: minmax(210px, 330px) 1fr; gap: 22px; padding: 18px; overflow: auto; max-height: calc(92vh - 68px); }
+    .detail-image { width: 100%; border-radius: 12px; }
+    .image-actions { display: flex; gap: 8px; margin-top: 10px; }
+    .image-actions button { flex: 1; padding: 7px; }
+    .detail-info { min-width: 0; }
+    .detail-info h3 { margin: 20px 0 8px; font-size: 1rem; }
+    .detail-info h3:first-child { margin-top: 0; }
+    .printing-select { width: 100%; padding: 9px; }
+    .type-line, .card-text, .muted { color: var(--muted); }
+    .card-text { white-space: pre-wrap; }
+    .printing-meta { margin: 8px 0; color: var(--muted); }
+    .combo { margin: 10px 0; padding: 12px; background: var(--panel-raised); border: 1px solid var(--border); border-radius: 10px; }
+    .combo h4 { margin: 0 0 5px; }
+    .combo p { margin: 6px 0; }
+    .combo ul { margin: 6px 0 0; padding-left: 20px; }
+    .combo .combo-cards { color: #e8c4a7; }
+    .combo-components { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; margin: 10px 0; }
+    .combo-component { min-width: 0; padding: 6px; text-align: center; background: #1c1f24; border: 1px solid var(--border); border-radius: 9px; }
+    button.combo-component { color: var(--text); cursor: pointer; }
+    .combo-component img { display: block; width: 100%; max-width: 120px; margin: 0 auto 6px; border-radius: 6px; background: #101114; }
+    .combo-component-name { display: block; font-size: .8rem; line-height: 1.25; overflow-wrap: anywhere; }
+    .combo-component-quantity { display: block; margin-top: 3px; color: var(--muted); font-size: .73rem; }
+    .combo-filter { display: flex; align-items: center; gap: 8px; margin: 8px 0 12px; color: var(--muted); }
+    .mana { color: var(--text); }
+
+    @media (max-width: 650px) {
+      main { padding: 12px; }
+      .toolbar { position: static; }
+      #cards { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+      .dialog-body { grid-template-columns: 1fr; gap: 18px; }
+      .image-column { max-width: 310px; margin: 0 auto; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Innistrad Card &amp; Combo Browser</h1>
+    <p>Browse cards from the selected Innistrad sets, view Scryfall images, and inspect listed two- and three-card combos.</p>
+  </header>
+
+  <main>
+    <section class="load-panel" aria-label="Load card data">
+      <input id="file-input" type="file" accept=".json,application/json">
+      <button id="choose-file" type="button">Load card JSON</button>
+      <p id="load-help">Loading <code>innistrad-cards-and-combos.json</code> from this folder… You can also choose the JSON file manually.</p>
+    </section>
+
+    <section class="toolbar" aria-label="Card filters">
+      <input id="search" type="search" placeholder="Search card names, types, or rules text…" aria-label="Search cards">
+      <select id="set-filter" aria-label="Filter by set"><option value="">All sets</option></select>
+      <select id="color-filter" aria-label="Filter by color">
+        <option value="">All colors</option>
+        <option value="W">White</option><option value="U">Blue</option><option value="B">Black</option>
+        <option value="R">Red</option><option value="G">Green</option><option value="C">Colorless</option>
+        <option value="M">Multicolor</option>
+      </select>
+      <select id="rarity-filter" aria-label="Filter by rarity">
+        <option value="">All rarities</option><option value="common">Common</option>
+        <option value="uncommon">Uncommon</option><option value="rare">Rare</option><option value="mythic">Mythic</option>
+      </select>
+      <label class="check-filter"><input id="combos-only" type="checkbox"> Has combos</label>
+      <label class="check-filter"><input id="all-set-combos-only" type="checkbox"> Has combos using only selected-set cards</label>
+    </section>
+
+    <p id="status" role="status" aria-live="polite">Load the JSON file to start browsing.</p>
+    <section id="cards" aria-label="Cards"></section>
+  </main>
+
+  <dialog id="details" aria-labelledby="detail-title">
+    <div class="dialog-head">
+      <h2 id="detail-title"></h2>
+      <button id="close-details" class="icon-button" type="button" aria-label="Close card details">×</button>
+    </div>
+    <div id="detail-content" class="dialog-body"></div>
+  </dialog>
+
+  <script>
+    (() => {
+      "use strict";
+
+      function displayText(value) {
+        if (value === undefined || value === null) return "";
+        if (typeof value === "string" || typeof value === "number") return String(value);
+        if (Array.isArray(value)) return value.map(displayText).filter(Boolean).join("; ");
+        if (typeof value === "object") {
+          return displayText(
+            value.feature?.name ??
+            value.template?.name ??
+            value.card?.name ??
+            value.name ??
+            value.text
+          );
+        }
+        return "";
+      }
+
+      function formatPrerequisites(combo) {
+        return [combo.easyPrerequisites, combo.notablePrerequisites]
+          .map(displayText)
+          .filter(Boolean)
+          .join("; ");
+      }
+
+      function formatNotes(notes) {
+        return displayText(notes);
+      }
+
+      function comboUsesOnlySelectedSetCards(combo, selectedOracleIds) {
+        return Array.isArray(combo.uses) && combo.uses.length > 0 &&
+          combo.uses.every(use => selectedOracleIds.has(use.card?.oracleId));
+      }
+
+      function componentImage(use, cardsByOracle, imageFor) {
+        const spellbookCard = use.card || {};
+        const card = cardsByOracle.get(spellbookCard.oracleId) || null;
+        const printing = card?.printings?.[0];
+        return {
+          card,
+          imageUrl: printing
+            ? imageFor(printing, 0)
+            : spellbookCard.imageUriFrontNormal || spellbookCard.imageUriFrontLarge || ""
+        };
+      }
+
+      window.InnistradBrowserHelpers = Object.freeze({
+        formatNotes,
+        formatPrerequisites,
+        comboUsesOnlySelectedSetCards,
+        componentImage
+      });
+    })();
+  </script>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const {
+        formatNotes,
+        formatPrerequisites,
+        comboUsesOnlySelectedSetCards: usesOnlySelectedSetCards,
+        componentImage
+      } = window.InnistradBrowserHelpers;
+
+      const fileInput = document.querySelector("#file-input");
+      const chooseFile = document.querySelector("#choose-file");
+      const loadHelp = document.querySelector("#load-help");
+      const status = document.querySelector("#status");
+      const cardsElement = document.querySelector("#cards");
+      const searchInput = document.querySelector("#search");
+      const setFilter = document.querySelector("#set-filter");
+      const colorFilter = document.querySelector("#color-filter");
+      const rarityFilter = document.querySelector("#rarity-filter");
+      const combosOnly = document.querySelector("#combos-only");
+      const allSetCombosOnly = document.querySelector("#all-set-combos-only");
+      const dialog = document.querySelector("#details");
+      const detailTitle = document.querySelector("#detail-title");
+      const detailContent = document.querySelector("#detail-content");
+
+      let cardData = [];
+      let comboData = {};
+      let cardByKey = new Map();
+      let cardByOracle = new Map();
+      let filteredCards = [];
+      let renderToken = 0;
+      let currentDetailToken = 0;
+
+      function element(tag, className, text) {
+        const node = document.createElement(tag);
+        if (className) node.className = className;
+        if (text !== undefined) node.textContent = text;
+        return node;
+      }
+
+      function cardKey(card) {
+        return card.oracle_id || card.printings?.[0]?.id || card.name;
+      }
+
+      function firstPrinting(card) {
+        return card.printings?.[0] || {};
+      }
+
+      function colorsOf(card) {
+        return firstPrinting(card).colors || [];
+      }
+
+      function colorLabel(card) {
+        const colors = colorsOf(card);
+        if (!colors.length) return "Colorless";
+        if (colors.length > 1) return "Multicolor";
+        return ({ W: "White", U: "Blue", B: "Black", R: "Red", G: "Green" })[colors[0]] || "Colorless";
+      }
+
+      function imageFor(printing, faceIndex) {
+        const face = printing.card_faces?.[faceIndex];
+        return face?.image_uris?.normal ||
+          printing.image_uris?.normal ||
+          face?.image_uris?.large ||
+          printing.image_uris?.large ||
+          "";
+      }
+
+      function showError(message) {
+        status.textContent = message;
+        status.classList.add("error");
+      }
+
+      function loadData(data) {
+        if (!data || !Array.isArray(data.cards) || !data.combos || typeof data.combos !== "object") {
+          throw new Error("This does not look like the card-and-combo JSON file.");
+        }
+        cardData = data.cards;
+        comboData = data.combos;
+        cardByKey = new Map(cardData.map(card => [cardKey(card), card]));
+        cardByOracle = new Map(cardData.filter(card => card.oracle_id).map(card => [card.oracle_id, card]));
+
+        const sets = new Map();
+        for (const card of cardData) {
+          for (const printing of card.printings || []) {
+            if (printing.set) sets.set(printing.set, printing.set_name || printing.set.toUpperCase());
+          }
+        }
+        setFilter.replaceChildren(new Option("All sets", ""));
+        [...sets.entries()]
+          .sort((a, b) => a[1].localeCompare(b[1]))
+          .forEach(([code, name]) => setFilter.add(new Option(name, code)));
+
+        loadHelp.textContent = `${data.metadata?.unique_oracle_cards ?? cardData.length.toLocaleString()} unique cards loaded. Card images are served by Scryfall.`;
+        status.classList.remove("error");
+        updateCards();
+      }
+
+      chooseFile.addEventListener("click", () => fileInput.click());
+      fileInput.addEventListener("change", async () => {
+        const file = fileInput.files?.[0];
+        if (!file) return;
+        status.classList.remove("error");
+        status.textContent = `Reading ${file.name}…`;
+        try {
+          loadData(JSON.parse(await file.text()));
+        } catch (error) {
+          showError(error instanceof SyntaxError ? "Could not parse that file as JSON." : error.message);
+        }
+      });
+
+      for (const control of [searchInput, setFilter, colorFilter, rarityFilter, combosOnly, allSetCombosOnly]) {
+        control.addEventListener("input", updateCards);
+        control.addEventListener("change", updateCards);
+      }
+
+      function updateCards() {
+        const query = searchInput.value.trim().toLocaleLowerCase();
+        const setCode = setFilter.value;
+        const color = colorFilter.value;
+        const rarity = rarityFilter.value;
+        filteredCards = cardData.filter(card => {
+          const printings = card.printings || [];
+          if (query) {
+            const searchable = [
+              card.name,
+              ...printings.flatMap(printing => [printing.type_line, printing.oracle_text, printing.mana_cost])
+            ].join(" ").toLocaleLowerCase();
+            if (!searchable.includes(query)) return false;
+          }
+          if (setCode && !printings.some(printing => printing.set === setCode)) return false;
+          if (rarity && !printings.some(printing => printing.rarity === rarity)) return false;
+          if (color === "C" && colorsOf(card).length !== 0) return false;
+          if (color === "M" && colorsOf(card).length < 2) return false;
+          if (["W", "U", "B", "R", "G"].includes(color) && !colorsOf(card).includes(color)) return false;
+          if (combosOnly.checked && !(card.combo_ids || []).length) return false;
+          if (allSetCombosOnly.checked && !(card.combo_ids || []).some(comboId => {
+            const combo = comboData[comboId];
+            return combo && comboUsesOnlySelectedSetCards(combo);
+          })) return false;
+          return true;
+        });
+
+        status.classList.remove("error");
+        status.textContent = `${filteredCards.length.toLocaleString()} of ${cardData.length.toLocaleString()} cards`;
+        renderCards();
+      }
+
+      function renderCards() {
+        const token = ++renderToken;
+        cardsElement.replaceChildren();
+        if (!filteredCards.length) {
+          cardsElement.append(element("p", "empty", "No cards match these filters."));
+          return;
+        }
+
+        const fragment = document.createDocumentFragment();
+        for (const card of filteredCards) {
+          const printing = firstPrinting(card);
+          const tile = element("button", "card-tile");
+          tile.type = "button";
+          tile.setAttribute("aria-label", `View ${card.name}`);
+          const image = document.createElement("img");
+          image.loading = "lazy";
+          image.decoding = "async";
+          image.alt = card.name;
+          image.src = imageFor(printing, 0);
+          image.addEventListener("error", () => {
+            image.alt = `${card.name} image unavailable`;
+            image.removeAttribute("src");
+          }, { once: true });
+          tile.append(image);
+          tile.append(element("span", "tile-name", card.name));
+          tile.append(element("span", "tile-meta", `${colorLabel(card)} · ${printing.type_line || "Card"}`));
+          const comboCount = (card.combo_ids || []).length;
+          if (comboCount) tile.append(element("span", "combo-tag", `${comboCount} combo${comboCount === 1 ? "" : "s"}`));
+          tile.addEventListener("click", () => openDetails(card, token));
+          fragment.append(tile);
+        }
+        if (token === renderToken) cardsElement.append(fragment);
+      }
+
+      function addText(parent, label, value, className) {
+        if (value === undefined || value === null || value === "") return;
+        const p = element("p", className || "");
+        const strong = element("strong", "", `${label}: `);
+        p.append(strong, document.createTextNode(String(value)));
+        parent.append(p);
+      }
+
+      function comboUsesOnlySelectedSetCards(combo) {
+        return usesOnlySelectedSetCards(combo, cardByOracle);
+      }
+
+      function renderComboList(container, card, filterEnabled, heading) {
+        const comboIds = card.combo_ids || [];
+        const allSetCount = comboIds.reduce((count, id) => {
+          const combo = comboData[id];
+          return count + (combo && comboUsesOnlySelectedSetCards(combo) ? 1 : 0);
+        }, 0);
+        const visibleIds = filterEnabled ? comboIds.filter(id => {
+          const combo = comboData[id];
+          return combo && comboUsesOnlySelectedSetCards(combo);
+        }) : comboIds;
+        heading.textContent = filterEnabled
+          ? `Combos (${visibleIds.length} all-set)`
+          : `Combos (${comboIds.length}; ${allSetCount} all-set)`;
+        container.replaceChildren();
+
+        if (!visibleIds.length) {
+          container.append(element("p", "muted", filterEnabled
+            ? "No combos use only cards from the selected Innistrad sets."
+            : "No two- or three-card combos for this card were found in the included data."));
+          return;
+        }
+
+        for (const comboId of visibleIds) {
+          const combo = comboData[comboId];
+          if (!combo) continue;
+          const box = element("article", "combo");
+          box.append(element("h4", "", `${combo.uses?.length || "?"}-card combo`));
+
+          const components = element("div", "combo-components");
+          for (const use of combo.uses || []) {
+            const spellbookCard = use.card || {};
+            const { card: setCard, imageUrl } = componentImage(use, cardByOracle, imageFor);
+            const component = setCard
+              ? element("button", "combo-component")
+              : element("div", "combo-component");
+            if (setCard) {
+              component.type = "button";
+              component.title = `Open ${setCard.name}`;
+              component.addEventListener("click", () => openDetails(setCard));
+            }
+
+            const image = document.createElement("img");
+            image.loading = "lazy";
+            image.decoding = "async";
+            image.alt = spellbookCard.name || "Combo card";
+            image.src = imageUrl;
+            image.addEventListener("error", () => image.remove(), { once: true });
+            if (image.src) component.append(image);
+
+            const name = element("span", "combo-component-name", spellbookCard.name || "Unknown card");
+            component.append(name);
+            if (use.quantity > 1) {
+              component.append(element("span", "combo-component-quantity", `Quantity: ${use.quantity}`));
+            }
+            components.append(component);
+          }
+          box.append(components);
+          addText(box, "Description", combo.description);
+          addText(box, "Prerequisites", formatPrerequisites(combo));
+          if (combo.requires?.length) {
+            addText(box, "Requires", combo.requires.map(item => item.feature?.name || item.name || "").filter(Boolean).join("; "));
+          }
+          if (combo.produces?.length) {
+            addText(box, "Produces", combo.produces.map(item => item.feature?.name || item.name || "").filter(Boolean).join("; "));
+          }
+          addText(box, "Notes", formatNotes(combo.notes));
+          const link = element("a", "", "Open combo on Commander Spellbook");
+          link.href = `https://commanderspellbook.com/combo/${encodeURIComponent(comboId)}/`;
+          link.target = "_blank";
+          link.rel = "noopener noreferrer";
+          box.append(link);
+          container.append(box);
+        }
+      }
+
+      function openDetails(card) {
+        const token = ++currentDetailToken;
+        detailTitle.textContent = card.name;
+        detailContent.replaceChildren();
+
+        const imageColumn = element("div", "image-column");
+        const image = element("img", "detail-image");
+        image.alt = card.name;
+        imageColumn.append(image);
+        const imageActions = element("div", "image-actions");
+        const flipButton = element("button", "", "Show back face");
+        flipButton.type = "button";
+        const scryfallLink = element("a", "", "View on Scryfall");
+        scryfallLink.target = "_blank";
+        scryfallLink.rel = "noopener noreferrer";
+        imageActions.append(flipButton, scryfallLink);
+        imageColumn.append(imageActions);
+
+        const info = element("div", "detail-info");
+        const printingHeading = element("h3", "", "Printing");
+        info.append(printingHeading);
+        const printings = card.printings || [];
+        const printingSelect = element("select", "printing-select");
+        printingSelect.setAttribute("aria-label", "Choose card printing");
+        printings.forEach((printing, index) => {
+          const label = `${printing.set_name || printing.set?.toUpperCase() || "Set"} · ${printing.collector_number || "?"} · ${printing.rarity || "unknown"}`;
+          printingSelect.add(new Option(label, String(index)));
+        });
+        info.append(printingSelect);
+        const meta = element("p", "printing-meta");
+        info.append(meta);
+
+        const combosHeading = element("h3");
+        const comboFilterLabel = element("label", "combo-filter");
+        const comboFilter = document.createElement("input");
+        comboFilter.type = "checkbox";
+        comboFilter.checked = false;
+        comboFilterLabel.append(comboFilter, document.createTextNode("Only combos where every card is in the selected sets"));
+        const comboList = element("div");
+        info.append(combosHeading, comboFilterLabel, comboList);
+        comboFilter.addEventListener("change", () => {
+          renderComboList(comboList, card, comboFilter.checked, combosHeading);
+        });
+        renderComboList(comboList, card, comboFilter.checked, combosHeading);
+
+        function updatePrinting() {
+          if (token !== currentDetailToken) return;
+          const selected = printings[Number(printingSelect.value)] || {};
+          image.alt = selected.name || card.name;
+          image.src = imageFor(selected, 0);
+          meta.textContent = [selected.set_name, selected.collector_number ? `#${selected.collector_number}` : "", selected.rarity, selected.released_at]
+            .filter(Boolean).join(" · ");
+          scryfallLink.href = selected.scryfall_uri || "https://scryfall.com";
+          const faces = selected.card_faces || [];
+          let showingBack = false;
+          flipButton.hidden = faces.length < 2;
+          flipButton.textContent = "Show back face";
+          flipButton.onclick = () => {
+            showingBack = !showingBack;
+            image.src = imageFor(selected, showingBack ? 1 : 0);
+            flipButton.textContent = showingBack ? "Show front face" : "Show back face";
+          };
+        }
+
+        printingSelect.addEventListener("change", updatePrinting);
+        image.addEventListener("error", () => {
+          if (token === currentDetailToken) image.alt = `${card.name} image unavailable from Scryfall`;
+        });
+        updatePrinting();
+        detailContent.append(imageColumn, info);
+        if (!dialog.open) dialog.showModal();
+      }
+
+      document.querySelector("#close-details").addEventListener("click", () => dialog.close());
+      dialog.addEventListener("click", event => {
+        if (event.target === dialog) dialog.close();
+      });
+
+      window.addEventListener("dragover", event => event.preventDefault());
+      window.addEventListener("drop", async event => {
+        event.preventDefault();
+        const file = event.dataTransfer?.files?.[0];
+        if (!file || !file.name.toLowerCase().endsWith(".json")) return;
+        status.classList.remove("error");
+        status.textContent = `Reading ${file.name}…`;
+        try {
+          loadData(JSON.parse(await file.text()));
+        } catch (error) {
+          showError(error instanceof SyntaxError ? "Could not parse that file as JSON." : error.message);
+        }
+      });
+
+      if (location.protocol !== "file:") {
+        fetch("./innistrad-cards-and-combos.json")
+          .then(response => {
+            if (!response.ok) throw new Error(`Could not load the JSON file (HTTP ${response.status}).`);
+            return response.json();
+          })
+          .then(loadData)
+          .catch(() => {
+            loadHelp.textContent = "Automatic loading was unavailable. Choose innistrad-cards-and-combos.json to browse.";
+            status.textContent = "Load the JSON file to start browsing.";
+          });
+      }
+    })();
+  </script>
+</body>
+</html>
