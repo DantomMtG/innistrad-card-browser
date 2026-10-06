@@ -2,35 +2,32 @@
 
 A small, dependency-free browser app for exploring cards from Innistrad sets and their two- and three-card combos listed by Commander Spellbook.
 
-## Run locally on Windows
+## Start the app on Windows
 
-Python 3 must be installed and available as `py`. The HTML page and its JSON data file must be in the **same folder**. If you use **Code → Download ZIP** from GitHub, extract the archive first.
-
-1. Open PowerShell and change to the folder containing `innistrad-card-browser.html` and `innistrad-cards-and-combos.json`. For example, if you extracted the repository into Downloads:
-
-   ```powershell
-   Set-Location "$HOME\Downloads\innistrad-card-browser"
-   ```
-
-   If you cloned or extracted it somewhere else, use that folder's path instead. Check that both files are there:
+1. Install Python 3 if it is not already installed. The Windows `py` launcher should be available in PowerShell.
+2. Download the repository with **Code → Download ZIP** and extract it, or clone it:
 
    ```powershell
-   Get-ChildItem .\innistrad-card-browser.html, .\innistrad-cards-and-combos.json
+   git clone https://github.com/DantomMtG/innistrad-card-browser.git
    ```
 
-2. Start the web server in that same PowerShell window:
+3. In the same PowerShell window, change to the cloned or extracted repository folder. For example:
 
    ```powershell
-   py -m http.server 8765 --bind 127.0.0.1
+   Set-Location "$HOME\innistrad-card-browser"
    ```
 
-   Leave this window open while using the app. A message such as `Serving HTTP on 127.0.0.1 port 8765` means the server is running.
+4. Start the app with one command:
 
-3. Open **<http://127.0.0.1:8765/innistrad-card-browser.html>** in your browser. The app automatically loads `innistrad-cards-and-combos.json` from the same folder. Going to `http://127.0.0.1:8765/` shows Python's folder listing; it is not the app page.
+   ```powershell
+   py .\run_app.py
+   ```
 
-4. To stop the server, return to the PowerShell window and press **Ctrl+C**. Closing the window also stops it.
+   The launcher serves the app and its data on localhost and opens the app in your default browser. Keep the PowerShell window open while using it; press **Ctrl+C** in that window to stop the server.
 
-If port 8765 is already in use, choose another port (for example `8766`) in the server command and URL. If the page opens but says it cannot load the data, verify that the JSON file is beside the HTML page and that the server was started from that directory. Alternatively, open the HTML file directly and choose the JSON with **Load card JSON**.
+The launcher uses port 8765 when available. If that port is already occupied, it automatically chooses another free localhost port and prints the URL to open. To choose a preferred port yourself, run `py .\run_app.py --port 8766`. To start the server without opening a browser automatically, add `--no-browser`.
+
+The root address printed by the launcher opens the app directly. The card JSON is loaded automatically from the same repository folder. If the automatic load fails, verify that `innistrad-cards-and-combos.json` is present beside `run_app.py` and `innistrad-card-browser.html`.
 
 ## Features
 
@@ -56,7 +53,13 @@ Data sources: [Scryfall](https://scryfall.com/docs/api) and [Commander Spellbook
 
 ## Tests
 
-Requires Node.js; no npm install is needed.
+The app launcher uses only Python's standard library. Run its server and route tests with:
+
+```powershell
+py -m unittest discover -s . -p "test_run_app.py" -v
+```
+
+The browser logic tests require Node.js; no npm install is needed:
 
 ```powershell
 node --test .\innistrad-card-browser.test.js
