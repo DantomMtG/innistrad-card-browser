@@ -48,6 +48,52 @@ test("keeps only combos whose every component is from the selected card set", ()
   assert.equal(helpers.comboUsesOnlySelectedSetCards({ uses: [] }, selected), false);
 });
 
+test("counts card combos according to the all-selected-set filter", () => {
+  const selected = new Set(["innistrad-card", "midnight-hunt-card"]);
+  const card = { combo_ids: ["all-set", "external", "missing"] };
+  const combos = {
+    "all-set": { uses: [{ card: { oracleId: "innistrad-card" } }, { card: { oracleId: "midnight-hunt-card" } }] },
+    external: { uses: [{ card: { oracleId: "innistrad-card" } }, { card: { oracleId: "outside-card" } }] }
+  };
+  assert.equal(helpers.availableComboCount(card, combos, selected, false), 2);
+  assert.equal(helpers.availableComboCount(card, combos, selected, true), 1);
+});
+
+test("reads EDHREC rank from available printings and handles unranked cards", () => {
+  assert.equal(helpers.edhrecRank({
+    printings: [{ edhrec_rank: null }, { edhrec_rank: 250 }, { edhrec_rank: 180 }]
+  }), 180);
+  assert.equal(helpers.edhrecRank({ printings: [{ edhrec_rank: null }] }), null);
+});
+
+test("sorts by filtered combo count and EDHREC rank with stable name tie breaks", () => {
+  const selected = new Set(["set-card", "outside-card"]);
+  const combos = {
+    set: { uses: [{ card: { oracleId: "set-card" } }, { card: { oracleId: "outside-card" } }] },
+    external: { uses: [{ card: { oracleId: "set-card" } }, { card: { oracleId: "other-card" } }] }
+  };
+  const cards = [
+    { name: "Beta", combo_ids: ["set", "external"], printings: [{ edhrec_rank: 200 }] },
+    { name: "Alpha", combo_ids: ["set"], printings: [{ edhrec_rank: 200 }] },
+    { name: "Delta", combo_ids: ["set"], printings: [{ edhrec_rank: 500 }] },
+    { name: "Epsilon", combo_ids: ["set"], printings: [{ edhrec_rank: 10 }] },
+    { name: "Gamma", combo_ids: [], printings: [{ edhrec_rank: null }] }
+  ];
+  const countForCard = card => helpers.availableComboCount(card, combos, selected, true);
+  assert.deepEqual(
+    Array.from(helpers.sortCards(cards, "combos-desc", countForCard), card => card.name),
+    ["Alpha", "Beta", "Delta", "Epsilon", "Gamma"]
+  );
+  assert.deepEqual(
+    Array.from(helpers.sortCards(cards, "edhrec-asc", countForCard), card => card.name),
+    ["Epsilon", "Alpha", "Beta", "Delta", "Gamma"]
+  );
+  assert.deepEqual(
+    Array.from(helpers.sortCards(cards, "edhrec-desc", countForCard), card => card.name),
+    ["Delta", "Alpha", "Beta", "Epsilon", "Gamma"]
+  );
+});
+
 test("inherits the top-level combo filter when opening each card, without coupling its checkbox state", () => {
   const firstCardFilter = { checked: false };
   helpers.inheritTopLevelComboFilter(firstCardFilter, true);
@@ -88,6 +134,10 @@ test("uses the saved Spellbook Scryfall image when a component is outside the se
 
 test("app wires combo helpers and an inline favicon", () => {
   assert.match(html, /id="all-set-combos-only"/);
+  assert.match(html, /id="sort-filter"/);
+  assert.match(html, /value="combos-desc"/);
+  assert.match(html, /value="edhrec-asc"/);
+  assert.match(html, /availableComboCount\(card, comboData, cardByOracle, allSetCombosOnly\.checked\)/);
   assert.match(html, /formatPrerequisites\(combo\)/);
   assert.match(html, /formatNotes\(combo\.notes\)/);
   assert.match(html, /comboUsesOnlySelectedSetCards\(combo\)/);

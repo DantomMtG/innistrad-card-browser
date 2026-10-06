@@ -189,6 +189,13 @@
         <option value="">All rarities</option><option value="common">Common</option>
         <option value="uncommon">Uncommon</option><option value="rare">Rare</option><option value="mythic">Mythic</option>
       </select>
+      <select id="sort-filter" aria-label="Sort cards">
+        <option value="name-asc">Sort: Name (A–Z)</option>
+        <option value="combos-desc">Sort: Available combos (most first)</option>
+        <option value="combos-asc">Sort: Available combos (fewest first)</option>
+        <option value="edhrec-asc">Sort: EDHREC rank (best first)</option>
+        <option value="edhrec-desc">Sort: EDHREC rank (worst first)</option>
+      </select>
       <label class="check-filter"><input id="combos-only" type="checkbox"> Has combos</label>
       <label class="check-filter"><input id="all-set-combos-only" type="checkbox"> Has combos using only selected-set cards</label>
     </section>
@@ -241,6 +248,39 @@
           combo.uses.every(use => selectedOracleIds.has(use.card?.oracleId));
       }
 
+      function availableComboCount(card, combosById, selectedOracleIds, selectedSetOnly) {
+        return (card.combo_ids || []).reduce((count, comboId) => {
+          const combo = combosById[comboId];
+          if (!combo) return count;
+          return count + (!selectedSetOnly || comboUsesOnlySelectedSetCards(combo, selectedOracleIds) ? 1 : 0);
+        }, 0);
+      }
+
+      function edhrecRank(card) {
+        const ranks = (card.printings || [])
+          .map(printing => printing.edhrec_rank)
+          .filter(rank => Number.isFinite(rank) && rank > 0);
+        return ranks.length ? Math.min(...ranks) : null;
+      }
+
+      function sortCards(cards, sortMode, comboCountForCard) {
+        return [...cards].sort((a, b) => {
+          if (sortMode === "combos-desc" || sortMode === "combos-asc") {
+            const difference = comboCountForCard(a) - comboCountForCard(b);
+            if (difference) return sortMode === "combos-desc" ? -difference : difference;
+          } else if (sortMode === "edhrec-asc" || sortMode === "edhrec-desc") {
+            const aRank = edhrecRank(a);
+            const bRank = edhrecRank(b);
+            if (aRank === null && bRank !== null) return 1;
+            if (bRank === null && aRank !== null) return -1;
+            if (aRank !== null && bRank !== null && aRank !== bRank) {
+              return sortMode === "edhrec-asc" ? aRank - bRank : bRank - aRank;
+            }
+          }
+          return a.name.localeCompare(b.name);
+        });
+      }
+
       function inheritTopLevelComboFilter(cardComboFilter, topLevelFilterEnabled) {
         cardComboFilter.checked = Boolean(topLevelFilterEnabled);
       }
@@ -261,6 +301,9 @@
         formatNotes,
         formatPrerequisites,
         comboUsesOnlySelectedSetCards,
+        availableComboCount,
+        edhrecRank,
+        sortCards,
         inheritTopLevelComboFilter,
         componentImage
       });
@@ -288,6 +331,7 @@
       const setFilter = document.querySelector("#set-filter");
       const colorFilter = document.querySelector("#color-filter");
       const rarityFilter = document.querySelector("#rarity-filter");
+      const sortFilter = document.querySelector("#sort-filter");
       const combosOnly = document.querySelector("#combos-only");
       const allSetCombosOnly = document.querySelector("#all-set-combos-only");
       const dialog = document.querySelector("#details");
@@ -362,6 +406,11 @@
           .sort((a, b) => a[1].localeCompare(b[1]))
           .forEach(([code, name]) => setFilter.add(new Option(name, code)));
 
+        const hasEdhrecRanks = cardData.some(card => edhrecRank(card) !== null);
+        for (const option of sortFilter.querySelectorAll('[value^="edhrec-"]')) {
+          option.disabled = !hasEdhrecRanks;
+        }
+
         loadHelp.textContent = `${data.metadata?.unique_oracle_cards ?? cardData.length.toLocaleString()} unique cards loaded. Card images are served by Scryfall.`;
         status.classList.remove("error");
         updateCards();
@@ -380,7 +429,7 @@
         }
       });
 
-      for (const control of [searchInput, setFilter, colorFilter, rarityFilter, combosOnly, allSetCombosOnly]) {
+      for (const control of [searchInput, setFilter, colorFilter, rarityFilter, sortFilter, combosOnly, allSetCombosOnly]) {
         control.addEventListener("input", updateCards);
         control.addEventListener("change", updateCards);
       }
@@ -390,7 +439,7 @@
         const setCode = setFilter.value;
         const color = colorFilter.value;
         const rarity = rarityFilter.value;
-        filteredCards = cardData.filter(card => {
+        const matchingCards = cardData.filter(card => {
           const printings = card.printings || [];
           if (query) {
             const searchable = [
@@ -411,6 +460,11 @@
           })) return false;
           return true;
         });
+        filteredCards = sortCards(
+          matchingCards,
+          sortFilter.value,
+          card => availableComboCount(card, comboData, cardByOracle, allSetCombosOnly.checked)
+        );
 
         status.classList.remove("error");
         status.textContent = `${filteredCards.length.toLocaleString()} of ${cardData.length.toLocaleString()} cards`;
@@ -443,7 +497,9 @@
           tile.append(image);
           tile.append(element("span", "tile-name", card.name));
           tile.append(element("span", "tile-meta", `${colorLabel(card)} · ${printing.type_line || "Card"}`));
-          const comboCount = (card.combo_ids || []).length;
+          const rank = edhrecRank(card);
+          if (rank !== null) tile.append(element("span", "tile-meta", `EDHREC rank #${rank.toLocaleString()}`));
+          const comboCount = availableComboCount(card, comboData, cardByOracle, allSetCombosOnly.checked);
           if (comboCount) tile.append(element("span", "combo-tag", `${comboCount} combo${comboCount === 1 ? "" : "s"}`));
           tile.addEventListener("click", () => openDetails(card, token));
           fragment.append(tile);

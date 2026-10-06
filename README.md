@@ -16,6 +16,7 @@ Then open <http://localhost:8765/>. The app automatically loads `innistrad-cards
 
 - Browse 1,655 unique cards from Innistrad, Dark Ascension, Avacyn Restored, Shadows over Innistrad, Eldritch Moon, Innistrad: Midnight Hunt, Innistrad: Crimson Vow, Innistrad: Double Feature, and Innistrad Remastered.
 - Search and filter by set, color, rarity, and combo availability.
+- Sort the filtered cards by name, available combo count, or EDHREC rank. Combo counts respect the all-selected-set combo filter; cards without an EDHREC rank sort last.
 - Inspect card printings, rules text, and Scryfall card images.
 - View two- and three-card combos, prerequisites, and outcomes.
 - Filter the main card list or a card's combo list to combos whose every component is included in the selected Innistrad sets.
