@@ -48,6 +48,21 @@ test("keeps only combos whose every component is from the selected card set", ()
   assert.equal(helpers.comboUsesOnlySelectedSetCards({ uses: [] }, selected), false);
 });
 
+test("inherits the top-level combo filter when opening each card, without coupling its checkbox state", () => {
+  const firstCardFilter = { checked: false };
+  helpers.inheritTopLevelComboFilter(firstCardFilter, true);
+  assert.equal(firstCardFilter.checked, true);
+
+  firstCardFilter.checked = false;
+  const nextCardFilter = { checked: false };
+  helpers.inheritTopLevelComboFilter(nextCardFilter, true);
+  assert.equal(nextCardFilter.checked, true);
+
+  const unfilteredCardFilter = { checked: true };
+  helpers.inheritTopLevelComboFilter(unfilteredCardFilter, false);
+  assert.equal(unfilteredCardFilter.checked, false);
+});
+
 test("gets a selected-set component image from its Scryfall printing", () => {
   const card = { name: "Innistrad Card", printings: [{ set: "isd", image_uris: { normal: "https://cards.scryfall.io/normal/innistrad.jpg" } }] };
   const result = helpers.componentImage(
@@ -76,6 +91,7 @@ test("app wires combo helpers and an inline favicon", () => {
   assert.match(html, /formatPrerequisites\(combo\)/);
   assert.match(html, /formatNotes\(combo\.notes\)/);
   assert.match(html, /comboUsesOnlySelectedSetCards\(combo\)/);
+  assert.match(html, /inheritTopLevelComboFilter\(comboFilter, allSetCombosOnly\.checked\)/);
   assert.match(html, /rel="icon" href="data:image\/svg\+xml,/);
   assert.doesNotMatch(html, /\(combo\.easyPrerequisites \|\| \[\]\)\.concat/);
 });

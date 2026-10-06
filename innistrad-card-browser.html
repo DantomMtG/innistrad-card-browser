@@ -241,6 +241,10 @@
           combo.uses.every(use => selectedOracleIds.has(use.card?.oracleId));
       }
 
+      function inheritTopLevelComboFilter(cardComboFilter, topLevelFilterEnabled) {
+        cardComboFilter.checked = Boolean(topLevelFilterEnabled);
+      }
+
       function componentImage(use, cardsByOracle, imageFor) {
         const spellbookCard = use.card || {};
         const card = cardsByOracle.get(spellbookCard.oracleId) || null;
@@ -257,6 +261,7 @@
         formatNotes,
         formatPrerequisites,
         comboUsesOnlySelectedSetCards,
+        inheritTopLevelComboFilter,
         componentImage
       });
     })();
@@ -270,6 +275,7 @@
         formatNotes,
         formatPrerequisites,
         comboUsesOnlySelectedSetCards: usesOnlySelectedSetCards,
+        inheritTopLevelComboFilter,
         componentImage
       } = window.InnistradBrowserHelpers;
 
@@ -568,7 +574,7 @@
         const comboFilterLabel = element("label", "combo-filter");
         const comboFilter = document.createElement("input");
         comboFilter.type = "checkbox";
-        comboFilter.checked = false;
+        inheritTopLevelComboFilter(comboFilter, allSetCombosOnly.checked);
         comboFilterLabel.append(comboFilter, document.createTextNode("Only combos where every card is in the selected sets"));
         const comboList = element("div");
         info.append(combosHeading, comboFilterLabel, comboList);
